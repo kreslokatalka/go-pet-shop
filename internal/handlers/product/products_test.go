@@ -38,11 +38,12 @@ func TestGetAllProducts_Success(t *testing.T) {
 
 	// Вызываем метод GetAllProducts, который является http.HandlerFunc
 	handler.GetAllProducts(w, req)
-
 	// Проверяем HTTP-код
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d", w.Code)
 	}
+
+	assertJSONBody(t, w, products)
 }
 func TestGetAllProducts_Error(t *testing.T) {
 	mock := mocks.NewProducts(t)
@@ -62,6 +63,10 @@ func TestGetAllProducts_Error(t *testing.T) {
 	if w.Code != http.StatusInternalServerError {
 		t.Fatalf("expected 500, got %d", w.Code)
 	}
+	assertJSONBody(t, w, map[string]string{
+		"error":   "Internal server error",
+		"message": "Failed to retrieve products",
+	})
 }
 
 // =======================
@@ -88,6 +93,13 @@ func TestCreateProduct_Success(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("exspected 200, got %d", w.Code)
 	}
+	assertJSONBody(t, w, map[string]interface{}{
+		"status": "Product created successfully",
+		"id":     10,
+		"product": models.Product{
+			ID: 10, Name: "name", Price: 40, Stock: 40,
+		},
+	})
 }
 
 func TestCreateProduct_BadRequest(t *testing.T) {
@@ -106,6 +118,10 @@ func TestCreateProduct_BadRequest(t *testing.T) {
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("exspected 400, got %d", w.Code)
 	}
+	assertJSONBody(t, w, map[string]string{
+		"error":   "Bad request",
+		"message": "Product name is required",
+	})
 }
 
 func TestCreateProduct_Fail(t *testing.T) {
@@ -127,6 +143,10 @@ func TestCreateProduct_Fail(t *testing.T) {
 	if w.Code != http.StatusInternalServerError {
 		t.Fatalf("exspected 500, got %d", w.Code)
 	}
+	assertJSONBody(t, w, map[string]string{
+		"error":   "Internal server error",
+		"message": "Failed to create product",
+	})
 }
 
 // =======================
@@ -156,6 +176,13 @@ func TestUpdateProduct_Success(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("exspected 200, got %d", w.Code)
 	}
+	assertJSONBody(t, w, map[string]interface{}{
+		"status": "Product updated successfully",
+		"id":     40,
+		"product": models.Product{
+			ID: 40, Name: "name", Price: 40, Stock: 40,
+		},
+	})
 }
 
 func TestUpdateProduct_BadRequest(t *testing.T) {
@@ -176,6 +203,10 @@ func TestUpdateProduct_BadRequest(t *testing.T) {
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("exspected 400, got %d", w.Code)
 	}
+	assertJSONBody(t, w, map[string]string{
+		"error":   "Bad request",
+		"message": "Product name is required",
+	})
 }
 
 func TestUpdateProduct_Fail(t *testing.T) {
@@ -202,6 +233,10 @@ func TestUpdateProduct_Fail(t *testing.T) {
 	if w.Code != http.StatusInternalServerError {
 		t.Fatalf("exspected 500, got %d", w.Code)
 	}
+	assertJSONBody(t, w, map[string]string{
+		"error":   "Internal server error",
+		"message": "Failed to update product",
+	})
 }
 
 // =======================
@@ -228,6 +263,11 @@ func TestDeleteProduct_Success(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("exspected 200, got %d", w.Code)
 	}
+	assertJSONBody(t, w, map[string]interface{}{
+		"status":  "Product deleted successfully",
+		"id":      40,
+		"message": "Product with ID 40 has been deleted",
+	})
 }
 
 func TestDeleteProduct_BadRequest(t *testing.T) {
@@ -246,6 +286,10 @@ func TestDeleteProduct_BadRequest(t *testing.T) {
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("exspected 400, got %d", w.Code)
 	}
+	assertJSONBody(t, w, map[string]string{
+		"error":   "Bad request",
+		"message": "Product ID must be a number",
+	})
 }
 
 func TestDeleteProduct_Fail(t *testing.T) {
@@ -267,5 +311,26 @@ func TestDeleteProduct_Fail(t *testing.T) {
 
 	if w.Code != http.StatusInternalServerError {
 		t.Fatalf("expected 500, got %d", w.Code)
+	}
+	assertJSONBody(t, w, map[string]string{
+		"error":   "Internal server error",
+		"message": "Failed to delete product",
+	})
+}
+
+func assertJSONBody(t *testing.T, w *httptest.ResponseRecorder, want interface{}) {
+	t.Helper()
+
+	expected, err := json.Marshal(want)
+	if err != nil {
+		t.Fatalf("failed to marshal expected response body: %v", err)
+	}
+
+	var actual bytes.Buffer
+	if err := json.Compact(&actual, w.Body.Bytes()); err != nil {
+		t.Fatalf("failed to compact response body: %v", err)
+	}
+	if !bytes.Equal(actual.Bytes(), expected) {
+		t.Fatalf("unexpected response body: got %s, want %s", actual.Bytes(), expected)
 	}
 }
