@@ -105,8 +105,7 @@ func TestCreateProduct_Success(t *testing.T) {
 func TestCreateProduct_BadRequest(t *testing.T) {
 	mock := mocks.NewProducts(t)
 
-	product := &models.Product{}
-	data, _ := json.Marshal(product)
+	data, _ := json.Marshal(`ID= 40, Name "name Price: 40, Stock: 40}`)
 	bodyReader := bytes.NewReader(data)
 
 	req := httptest.NewRequest(http.MethodPost, "/products", bodyReader)
@@ -120,7 +119,7 @@ func TestCreateProduct_BadRequest(t *testing.T) {
 	}
 	assertJSONBody(t, w, map[string]string{
 		"error":   "Bad request",
-		"message": "Product name is required",
+		"message": "Invalid JSON payload",
 	})
 }
 
@@ -188,8 +187,7 @@ func TestUpdateProduct_Success(t *testing.T) {
 func TestUpdateProduct_BadRequest(t *testing.T) {
 	mock := mocks.NewProducts(t)
 
-	product := &models.Product{}
-	data, _ := json.Marshal(product)
+	data, _ := json.Marshal(`ID= 40, Name "name Price: 40, Stock: 40}`)
 	bodyReader := bytes.NewReader(data)
 
 	req := httptest.NewRequest(http.MethodPut, "/products/40", bodyReader)
@@ -205,7 +203,7 @@ func TestUpdateProduct_BadRequest(t *testing.T) {
 	}
 	assertJSONBody(t, w, map[string]string{
 		"error":   "Bad request",
-		"message": "Product name is required",
+		"message": "Invalid JSON payload",
 	})
 }
 
@@ -273,22 +271,18 @@ func TestDeleteProduct_Success(t *testing.T) {
 func TestDeleteProduct_BadRequest(t *testing.T) {
 	mock := mocks.NewProducts(t)
 
-	handler := New(slog.Default(), mock)
-
-	router := chi.NewRouter()
-	router.Delete("/products/{id}", handler.DeleteProduct)
-
-	req := httptest.NewRequest(http.MethodDelete, "/products/abc", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/products", nil)
 	w := httptest.NewRecorder()
 
-	router.ServeHTTP(w, req)
+	handler := New(slog.Default(), mock)
+	handler.DeleteProduct(w, req)
 
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("exspected 400, got %d", w.Code)
 	}
 	assertJSONBody(t, w, map[string]string{
 		"error":   "Bad request",
-		"message": "Product ID must be a number",
+		"message": "Product ID is required",
 	})
 }
 
